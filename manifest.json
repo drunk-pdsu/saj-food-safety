@@ -1,0 +1,15 @@
+{
+  "id": "/",
+  "name": "食安警戒 - AI膳食管理",
+  "short_name": "食安警戒",
+  "description": "AI 智能膳食识别与药食禁忌预警",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef1f6",
+  "theme_color": "#0f9b8e",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "192x192 512x512 any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
