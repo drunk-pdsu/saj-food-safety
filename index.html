@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>食安警戒 - AI膳食管理</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0f9b8e">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; background: #eef1f6; min-height: 100vh; color: #222; }
+    .hidden { display: none !important; }
+
+    /* 登录 */
+    .login-page { display: flex; flex-direction: column; min-height: 100vh; background: linear-gradient(135deg, #0f9b8e 0%, #143c5c 100%); }
+    .login-header { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; padding: 40px 20px; }
+    .login-header .logo { font-size: 64px; margin-bottom: 12px; }
+    .login-header h1 { font-size: 30px; font-weight: 800; letter-spacing: 2px; }
+    .login-header p { font-size: 14px; opacity: .85; margin-top: 6px; }
+    .login-form { background: #fff; border-radius: 26px 26px 0 0; padding: 30px 24px 40px; }
+    .tabs { display: flex; gap: 18px; margin-bottom: 22px; }
+    .tab { font-size: 16px; font-weight: 600; color: #aaa; padding-bottom: 6px; border-bottom: 2px solid transparent; }
+    .tab.active { color: #0f9b8e; border-bottom-color: #0f9b8e; }
+    .input-group { margin-bottom: 16px; }
+    .input-group label { display: block; font-size: 13px; color: #666; margin-bottom: 6px; }
+    .input-group input { width: 100%; padding: 14px 16px; border: 1.5px solid #e3e7ee; border-radius: 12px; font-size: 16px; outline: none; }
+    .input-group input:focus { border-color: #0f9b8e; }
+    .login-btn { width: 100%; padding: 15px; background: linear-gradient(135deg, #0f9b8e, #143c5c); color: #fff; border: none; border-radius: 12px; font-size: 17px; font-weight: 700; cursor: pointer; margin-top: 6px; }
+    .login-btn:active { opacity: .88; }
+    .login-error { color: #e74c3c; font-size: 13px; text-align: center; margin-top: 12px; }
+
+    /* App */
+    .app-header { background: linear-gradient(135deg, #0f9b8e, #143c5c); color: #fff; padding: 46px 20px 22px; border-radius: 0 0 28px 28px; }
+    .app-header .greeting { font-size: 22px; font-weight: 800; }
+    .app-header .sub { font-size: 13px; opacity: .85; margin-top: 4px; }
+    .app-content { padding: 14px 14px 110px; }
+    .card { background: #fff; border-radius: 16px; padding: 16px; margin-bottom: 13px; box-shadow: 0 2px 10px rgba(20,60,92,.06); }
+    .card-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .card-title .more { font-size: 12px; color: #999; font-weight: 400; }
+
+    .quick-btn { width: 100%; padding: 16px; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(135deg, #ff8a5b, #ff5e62); display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .quick-btn:active { opacity: .9; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+    .chip { padding: 8px 14px; border-radius: 20px; font-size: 13px; background: #f1f4f9; color: #555; border: 1.5px solid transparent; cursor: pointer; user-select: none; }
+    .chip.on { background: #e6f7f4; color: #0f9b8e; border-color: #0f9b8e; font-weight: 600; }
+    .section-label { font-size: 13px; color: #888; margin: 12px 0 2px; }
+
+    .meal-item { display: flex; align-items: center; padding: 11px 0; border-bottom: 1px solid #f3f5f8; }
+    .meal-item:last-child { border-bottom: none; }
+    .meal-icon { font-size: 30px; margin-right: 12px; }
+    .meal-info { flex: 1; }
+    .meal-name { font-size: 15px; font-weight: 500; }
+    .meal-desc { font-size: 12px; color: #999; margin-top: 2px; }
+    .meal-cal { font-size: 14px; font-weight: 700; color: #e67e22; }
+
+    .warn-item { padding: 10px 12px; border-radius: 10px; margin-bottom: 8px; font-size: 13px; line-height: 1.5; }
+    .warn-item.red { background: #fdecea; color: #b03a2e; }
+    .warn-item.yellow { background: #fff8e1; color: #9a7d12; }
+    .warn-item.blue { background: #eaf6ff; color: #2e6da4; }
+
+    /* 弹窗 */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; justify-content: center; align-items: center; z-index: 100; padding: 22px; }
+    .modal-overlay.active { display: flex; }
+    .modal-content { background: #fff; border-radius: 20px; padding: 22px; width: 100%; max-width: 380px; max-height: 86vh; overflow-y: auto; }
+    .modal-content h3 { margin-bottom: 10px; font-size: 18px; text-align: center; }
+    .modal-btn { width: 100%; padding: 13px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 10px; }
+    .modal-btn.primary { background: #e74c3c; color: #fff; }
+    .modal-btn.primary.ok { background: #0f9b8e; }
+    .modal-btn.secondary { background: #eef1f6; color: #666; }
+    .modal-btn:active { opacity: .9; }
+
+    /* 识别选择 */
+    .scenario-btn { width: 100%; text-align: left; padding: 11px 14px; border: 1.5px solid #e3e7ee; border-radius: 12px; background: #fff; margin-bottom: 8px; cursor: pointer; font-size: 14px; }
+    .scenario-btn:hover { border-color: #0f9b8e; }
+    .food-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 8px 0; }
+    .food-pick { padding: 10px 4px; border-radius: 12px; background: #f4f7fb; text-align: center; font-size: 12px; cursor: pointer; border: 1.5px solid transparent; }
+    .food-pick.on { background: #e6f7f4; border-color: #0f9b8e; }
+    .food-pick .emo { font-size: 22px; display: block; }
+    .plate { margin-top: 8px; }
+    .plate-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #f7f9fc; border-radius: 10px; margin-bottom: 6px; font-size: 14px; }
+    .plate-item .x { color: #e74c3c; cursor: pointer; font-weight: 700; }
+    .result-food { display: flex; justify-content: space-between; padding: 7px 0; font-size: 14px; border-bottom: 1px solid #f3f5f8; }
+    .result-food:last-child { border-bottom: none; }
+
+    .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.82); color: #fff; padding: 11px 20px; border-radius: 22px; font-size: 14px; z-index: 200; display: none; white-space: nowrap; }
+    .toast.show { display: block; }
+
+    .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #eef1f6; display: flex; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); gap: 14px; }
+    .bottom-bar .nav { flex: 1; text-align: center; font-size: 11px; color: #999; cursor: pointer; }
+    .bottom-bar .nav .ic { font-size: 22px; display: block; margin-bottom: 2px; }
+    .bottom-bar .nav.on { color: #0f9b8e; }
+
+    /* 自定义输入 / 克数编辑 / 识别记录 */
+    .add-row { display: flex; gap: 8px; margin-top: 8px; }
+    .add-row input { flex: 1; padding: 9px 12px; border: 1.5px solid #e3e7ee; border-radius: 10px; font-size: 14px; outline: none; min-width: 0; }
+    .add-row input:focus { border-color: #0f9b8e; }
+    .add-btn { padding: 9px 14px; border: none; border-radius: 10px; background: #0f9b8e; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    .add-btn:active { opacity: .9; }
+    .plate-ctrl { display: inline-flex; align-items: center; gap: 8px; }
+    .plate-ctrl .wt { min-width: 58px; text-align: right; cursor: pointer; color: #0f9b8e; font-weight: 600; }
+    .meal-edit { color: #0f9b8e; font-size: 12px; cursor: pointer; margin-left: 8px; }
+    .rec-item { border-bottom: 1px solid #f3f5f8; padding: 9px 0; font-size: 13px; }
+    .rec-item:last-child { border-bottom: none; }
+    .rec-head { display: flex; justify-content: space-between; font-weight: 600; }
+    .rec-foods { color: #666; margin-top: 3px; line-height: 1.6; }
+
+    /* 个人中心 */
+    .stat-row { display: flex; gap: 10px; }
+    .stat-box { flex: 1; background: #f7f9fc; border-radius: 12px; padding: 12px 6px; text-align: center; }
+    .stat-num { font-size: 20px; font-weight: 800; color: #0f9b8e; }
+    .stat-label { font-size: 11px; color: #888; margin-top: 3px; }
+    .prof-tag { display: inline-block; background: #e6f7f4; color: #0f9b8e; border-radius: 14px; padding: 4px 10px; font-size: 12px; margin: 3px 4px 0 0; font-weight: 600; }
+    .prof-empty { color: #bbb; font-size: 13px; }
+
+    /* 登录 / 注册 */
+    .subtabs { display: flex; gap: 18px; margin-bottom: 16px; }
+    .subtab { font-size: 14px; color: #aaa; padding-bottom: 6px; border-bottom: 2px solid transparent; cursor: pointer; }
+    .subtab.active { color: #0f9b8e; border-bottom-color: #0f9b8e; font-weight: 600; }
+    .row { display: flex; gap: 10px; align-items: center; }
+    .row input { flex: 1; min-width: 0; }
+    .code-btn { padding: 12px 12px; border: none; border-radius: 12px; background: #eef1f6; color: #0f9b8e; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    .code-btn:disabled { color: #aaa; background: #f5f6f8; cursor: not-allowed; }
+    .link-row { text-align: right; margin: 2px 0 6px; }
+    .link { font-size: 13px; color: #0f9b8e; cursor: pointer; }
+    .agree { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; color: #666; margin: 2px 0 8px; line-height: 1.5; }
+    .agree input { margin-top: 2px; }
+    .demo-tip { font-size: 11px; color: #aaa; text-align: center; margin-top: 14px; line-height: 1.6; }
+    .code-banner { background: #fff8e1; border: 1px solid #ffe082; color: #9a7d12; border-radius: 10px; padding: 10px 12px; font-size: 14px; margin-bottom: 14px; text-align: center; font-weight: 700; }
+    .modal-btn.danger { background: #fdecea; color: #e74c3c; }
+
+    /* 亲情关怀 */
+    .fam-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f3f5f8; }
+    .fam-item:last-child { border-bottom: none; }
+    .fam-av { font-size: 34px; width: 44px; text-align: center; }
+    .fam-info { flex: 1; min-width: 0; }
+    .fam-name { font-size: 15px; font-weight: 600; }
+    .fam-rel { font-size: 11px; color: #fff; background: #0f9b8e; border-radius: 8px; padding: 1px 6px; margin-left: 6px; font-weight: 400; }
+    .fam-sub { font-size: 12px; color: #888; margin-top: 2px; }
+    .fam-acts { display: flex; flex-direction: column; gap: 6px; }
+    .fam-acts button { border: none; border-radius: 9px; padding: 7px 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .fam-acts .rec { background: #0f9b8e; color: #fff; }
+    .fam-acts .rem { background: #fff3e0; color: #e67e22; }
+    .emoji-pick { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 4px; }
+    .emoji-opt { font-size: 26px; width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; border: 2px solid #e3e7ee; border-radius: 12px; cursor: pointer; }
+    .emoji-opt.on { border-color: #0f9b8e; background: #e6f7f4; }
+  </style>
+</head>
+<body>
+
+<!-- 登录 -->
+<div class="login-page" id="loginPage">
+  <div class="login-header">
+    <div class="logo">🥗</div>
+    <h1>食安警戒</h1>
+    <p>AI 智能膳食 · 药食禁忌预警</p>
+  </div>
+  <div class="login-form">
+    <div class="tabs">
+      <div class="tab active" id="tabLogin" onclick="switchAuth('login')">登 录</div>
+      <div class="tab" id="tabReg" onclick="switchAuth('register')">注 册</div>
+    </div>
+    <div id="codeBanner" class="code-banner hidden"></div>
+
+    <!-- 登录 -->
+    <div id="loginPanel">
+      <div class="subtabs">
+        <span class="subtab active" id="subCode" onclick="switchLoginMode('code')">验证码登录</span>
+        <span class="subtab" id="subPwd" onclick="switchLoginMode('pwd')">密码登录</span>
+      </div>
+      <div id="loginCodeMode">
+        <div class="input-group">
+          <label>手机号</label>
+          <div class="row">
+            <input type="tel" id="loginPhone" maxlength="11" inputmode="numeric" placeholder="请输入11位手机号">
+            <button class="code-btn" id="loginCodeBtn" onclick="sendCode('login')">获取验证码</button>
+          </div>
+        </div>
+        <div class="input-group">
+          <label>验证码</label>
+          <input type="text" id="loginCode" maxlength="6" inputmode="numeric" placeholder="请输入6位验证码">
+        </div>
+        <button class="login-btn" onclick="handleCodeLogin()">登 录</button>
+      </div>
+      <div id="loginPwdMode" style="display:none">
+        <div class="input-group">
+          <label>手机号</label>
+          <input type="tel" id="pwdPhone" maxlength="11" inputmode="numeric" placeholder="请输入11位手机号">
+        </div>
+        <div class="input-group">
+          <label>密码</label>
+          <input type="password" id="pwdInput" maxlength="20" placeholder="请输入密码">
+        </div>
+        <div class="link-row"><span class="link" onclick="switchAuth('register')">没有账号？去注册 →</span></div>
+        <button class="login-btn" onclick="handlePwdLogin()">登 录</button>
+      </div>
+    </div>
+
+    <!-- 注册 -->
+    <div id="registerPanel" style="display:none">
+      <div class="input-group">
+        <label>手机号</label>
+        <div class="row">
+          <input type="tel" id="regPhone" maxlength="11" inputmode="numeric" placeholder="请输入11位手机号">
+          <button class="code-btn" id="regCodeBtn" onclick="sendCode('reg')">获取验证码</button>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>验证码</label>
+        <input type="text" id="regCode" maxlength="6" inputmode="numeric" placeholder="请输入6位验证码">
+      </div>
+      <div class="input-group">
+        <label>设置密码</label>
+        <input type="password" id="regPwd" maxlength="20" placeholder="请设置密码（至少6位）">
+      </div>
+      <div class="input-group">
+        <label>确认密码</label>
+        <input type="password" id="regPwd2" maxlength="20" placeholder="请再次输入密码">
+      </div>
+      <label class="agree"><input type="checkbox" id="regAgree"> 我已阅读并同意<span class="link" onclick="toast('演示：用户协议')">《用户协议》</span>和<span class="link" onclick="toast('演示：隐私政策')">《隐私政策》</span></label>
+      <button class="login-btn" onclick="handleRegister()">注 册</button>
+      <div class="link-row" style="text-align:center;margin-top:8px"><span class="link" onclick="switchAuth('login')">已有账号？去登录</span></div>
+    </div>
+
+    <div class="login-error" id="loginError"></div>
+    <button class="login-btn" style="background:linear-gradient(135deg,#ff8a5b,#ff5e62);margin-top:6px" onclick="enterDemo()">🎁 一键体验（演示账号，免注册）</button>
+    <div class="demo-tip">演示环境：验证码点击"获取验证码"后在下方黄框查看，不会真实发送短信；账号数据仅存本机。<br>评审测试账号：手机号 13800138000，密码 demo123</div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="appPage" class="hidden">
+  <div class="app-header">
+    <div class="greeting" id="greeting">👋 欢迎回来</div>
+    <div class="sub" id="userSub"></div>
+  </div>
+  <div class="app-content">
+    <!-- 健康档案 -->
+    <div class="card">
+      <div class="card-title">👤 我的健康档案 <span class="more" onclick="toast('档案用于精准预警，仅本地存储')">本地存储</span></div>
+      <div class="section-label">慢性疾病（点击选择）</div>
+      <div class="chips" id="diseaseChips"></div>
+      <div class="add-row">
+        <input id="customDiseaseInput" placeholder="自定义疾病，如：甲亢 / 脂肪肝" maxlength="12">
+        <button class="add-btn" onclick="addCustomDisease()">＋ 添加</button>
+      </div>
+      <div class="section-label">正在服用药品（点击选择）</div>
+      <div class="chips" id="medChips"></div>
+      <div class="add-row">
+        <input id="customMedInput" placeholder="自定义药品，如：二甲双胍缓释片" maxlength="16">
+        <button class="add-btn" onclick="addCustomMed()">＋ 添加</button>
+      </div>
+    </div>
+
+    <!-- 快速识别 -->
+    <div class="card">
+      <div class="card-title">📸 拍照 / 上传识别</div>
+      <button class="quick-btn" onclick="openScan()">📷 开始识别这一餐</button>
+    </div>
+
+    <!-- 今日饮食 -->
+    <div class="card">
+      <div class="card-title">🍽️ 今日饮食 <span class="more" id="todayCal">总热量 0 kcal</span></div>
+      <div id="mealList"><div class="meal-desc" style="text-align:center;padding:10px;color:#bbb">还没有记录，去识别第一餐吧</div></div>
+    </div>
+
+    <!-- 识别记录（历史，本地持久化） -->
+    <div class="card">
+      <div class="card-title">📋 识别记录 <span class="more" onclick="clearRecords()">清空</span></div>
+      <div id="recordList"><div class="meal-desc" style="text-align:center;padding:10px;color:#bbb">暂无识别记录</div></div>
+    </div>
+
+    <!-- 亲情关怀 -->
+    <div class="card">
+      <div class="card-title">💗 亲情关怀 <span class="more" onclick="openAddMember()">+ 添加家人</span></div>
+      <div id="familyList"><div class="meal-desc" style="text-align:center;padding:10px;color:#bbb">还没有家人，点右上角"添加家人"</div></div>
+      <hr style="border:none;border-top:1px solid #eee;margin:12px 0">
+      <div class="section-label">🔗 云端关联家人（输入对方账号密码，即可看 TA 今天吃了什么）</div>
+      <div class="add-row">
+        <input id="linkPhone" placeholder="家人手机号" maxlength="11" inputmode="numeric">
+        <input id="linkPwd" type="password" placeholder="对方密码">
+      </div>
+      <button class="add-btn" style="width:100%;margin-top:8px" onclick="cloudLink()">🔗 关联家人</button>
+      <div id="cloudFamily" style="margin-top:10px"></div>
+    </div>
+
+    <!-- 预警历史 -->
+    <div class="card">
+      <div class="card-title">⚠️ 预警历史 <span class="more" onclick="clearHistory()">清空</span></div>
+      <div id="historyList"><div class="meal-desc" style="text-align:center;padding:10px;color:#bbb">暂无预警记录</div></div>
+      <button class="modal-btn ok" style="margin-top:12px" onclick="openNutrition()">📊 查看今日营养评估</button>
+    </div>
+  </div>
+
+  <div class="bottom-bar">
+    <div class="nav on" onclick="showView('home')"><span class="ic">🏠</span>首页</div>
+    <div class="nav" onclick="openScan()"><span class="ic">📷</span>识别</div>
+    <div class="nav" onclick="openNutrition()"><span class="ic">📊</span>评估</div>
+    <div class="nav" onclick="showView('profile')"><span class="ic">👤</span>我的</div>
+  </div>
+</div>
+
+<!-- 个人中心 -->
+<div id="profilePage" class="hidden">
+  <div class="app-header">
+    <div class="greeting">👤 个人中心</div>
+    <div class="sub" id="profileSub">用户</div>
+  </div>
+  <div class="app-content">
+    <!-- 健康档案 -->
+    <div class="card">
+      <div class="card-title">🏥 我的健康档案 <span class="more" onclick="showView('home')">去首页编辑</span></div>
+      <div class="section-label">慢性疾病</div>
+      <div id="profileDiseases"><span class="prof-empty">未设置</span></div>
+      <div class="section-label">正在服用药品</div>
+      <div id="profileMeds"><span class="prof-empty">未设置</span></div>
+    </div>
+
+    <!-- 数据统计 -->
+    <div class="card">
+      <div class="card-title">📈 数据统计 <span class="more">数据仅存本机</span></div>
+      <div class="stat-row">
+        <div class="stat-box"><div class="stat-num" id="stRecogToday">0</div><div class="stat-label">今日识别</div></div>
+        <div class="stat-box"><div class="stat-num" id="stMealToday">0</div><div class="stat-label">今日饮食</div></div>
+        <div class="stat-box"><div class="stat-num" id="stCalToday">0</div><div class="stat-label">今日热量kcal</div></div>
+      </div>
+      <div class="stat-row" style="margin-top:10px">
+        <div class="stat-box"><div class="stat-num" id="stRecogAll">0</div><div class="stat-label">累计识别</div></div>
+        <div class="stat-box"><div class="stat-num" id="stRecords">0</div><div class="stat-label">累计记录</div></div>
+        <div class="stat-box"><div class="stat-num" id="stWarns">0</div><div class="stat-label">累计预警</div></div>
+      </div>
+    </div>
+
+    <!-- 数据管理 -->
+    <div class="card">
+      <div class="card-title">⚙️ 数据管理</div>
+      <button class="modal-btn secondary" onclick="exportData()">⬇️ 导出我的数据（JSON）</button>
+      <button class="modal-btn secondary" onclick="clearTodayData()">🧹 清空今日饮食</button>
+      <button class="modal-btn secondary" onclick="clearRecords()">🧹 清空识别记录</button>
+      <button class="modal-btn primary" onclick="resetAll()">🗑️ 清空全部数据</button>
+    </div>
+
+    <!-- 关于 -->
+    <div class="card">
+      <div class="card-title">ℹ️ 关于</div>
+      <div class="rec-foods" style="line-height:1.9">
+        <b>食安警戒 · AI 膳食管理</b> v1.0<br>
+        食物识别：云端多模态大模型（智谱 GLM-4V）优先，本地 CLIP 离线兜底。<br>
+        营养/禁忌：内置食物库 + 识别模型实时营养 + 药食禁忌规则。<br>
+        所有数据仅保存在本机浏览器，不上传服务器。
+      </div>
+    </div>
+
+    <button class="modal-btn danger" onclick="logout()">🚪 退出登录</button>
+  </div>
+
+  <div class="bottom-bar">
+    <div class="nav" onclick="showView('home')"><span class="ic">🏠</span>首页</div>
+    <div class="nav" onclick="openScan()"><span class="ic">📷</span>识别</div>
+    <div class="nav" onclick="openNutrition()"><span class="ic">📊</span>评估</div>
+    <div class="nav on"><span class="ic">👤</span>我的</div>
+  </div>
+</div>
+
+<!-- 识别弹窗 -->
+<div class="modal-overlay" id="scanModal">
+  <div class="modal-content">
+    <h3>📷 膳食识别</h3>
+
+    <!-- 拍摄 / 上传（真实 AI 识别） -->
+    <div class="section-label">拍照或上传这一餐的照片（AI 真实识别）</div>
+    <div style="display:flex;gap:10px">
+      <button class="modal-btn primary" style="margin-top:0;flex:1" onclick="openCamera()">📷 拍照</button>
+      <label class="modal-btn secondary" style="margin-top:0;flex:1;text-align:center;cursor:pointer">📁 上传图片
+        <input type="file" id="fileInput" accept="image/*" onchange="onFileChange(event)" style="display:none">
+      </label>
+      <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="onFileChange(event)" style="display:none">
+    </div>
+    <div id="camWrap" class="hidden" style="margin-top:10px">
+      <video id="cam" playsinline style="width:100%;border-radius:12px;background:#000;max-height:300px"></video>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="modal-btn primary" style="margin-top:0;flex:1" onclick="takePhoto()">✅ 拍摄这张</button>
+        <button class="modal-btn secondary" style="margin-top:0;flex:1" onclick="closeCamera()">✕ 关闭</button>
+      </div>
+    </div>
+    <img id="imgPreview" class="hidden" style="width:100%;border-radius:12px;margin-top:10px">
+    <div id="recogStatus" class="hidden" style="font-size:13px;color:#0f9b8e;margin-top:8px">🔍 正在识别中…</div>
+
+    <hr style="border:none;border-top:1px solid #eee;margin:14px 0">
+
+    <!-- 场景（离线兜底 / 快速演示） -->
+    <div class="section-label">无照片？也可使用预设场景（演示）</div>
+    <button class="scenario-btn" onclick="applyScenario('zhang')">🧓 老张：痛风 + 华法林，午餐西兰花炒牛肉+米饭</button>
+    <button class="scenario-btn" onclick="applyScenario('seafood')">🦐 海鲜宴：海鲜 + 啤酒（痛风）</button>
+    <button class="scenario-btn" onclick="applyScenario('grapefruit')">🍊 西柚 + 降压药</button>
+    <button class="scenario-btn" onclick="applyScenario('healthy')">🥗 健康餐：鸡胸肉+菠菜+红薯+苹果</button>
+    <div class="section-label">或手动点选食物</div>
+    <div class="food-grid" id="foodGrid"></div>
+    <div class="plate" id="plate"></div>
+    <button class="modal-btn primary" style="background:linear-gradient(135deg,#0f9b8e,#143c5c)" onclick="preCheck()">🛡️ 食用前安全扫描</button>
+    <button class="modal-btn secondary" onclick="runAnalyze()">📊 查看详细营养</button>
+    <button class="modal-btn secondary" onclick="closeModal('scanModal')">取消</button>
+  </div>
+</div>
+
+<!-- 识别结果弹窗 -->
+<div class="modal-overlay" id="resultModal">
+  <div class="modal-content">
+    <h3>🔍 识别结果</h3>
+    <div id="resultBody"></div>
+    <button class="modal-btn primary" id="resultWarnBtn" onclick="afterResult()">查看预警</button>
+    <button class="modal-btn secondary" onclick="closeModal('resultModal')">关闭</button>
+  </div>
+</div>
+
+<!-- 预警弹窗（红色强制确认） -->
+<div class="modal-overlay" id="warnModal">
+  <div class="modal-content" id="warnContent"></div>
+</div>
+
+<!-- 营养评估弹窗 -->
+<div class="modal-overlay" id="nutritionModal">
+  <div class="modal-content">
+    <h3>📊 今日营养评估</h3>
+    <div id="nutritionBody"></div>
+    <button class="modal-btn primary ok" onclick="closeModal('nutritionModal')">知道了</button>
+  </div>
+</div>
+
+<!-- 通用确认弹窗 -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-content" style="max-width:320px">
+    <h3 id="confirmTitle">提示</h3>
+    <div id="confirmMsg" style="font-size:14px;color:#555;text-align:center;line-height:1.6;margin:8px 0 6px"></div>
+    <button class="modal-btn primary ok" id="confirmOk" onclick="confirmOk()">确定</button>
+    <button class="modal-btn secondary" onclick="confirmCancel()">取消</button>
+  </div>
+</div>
+
+<!-- 食用前安全守门员 -->
+<div class="modal-overlay" id="guardModal">
+  <div class="modal-content">
+    <div style="font-size:42px;text-align:center" id="guardIcon">🛡️</div>
+    <h3 id="guardTitle" style="text-align:center">食用前安全扫描</h3>
+    <div id="guardBody"></div>
+    <button class="modal-btn primary ok" id="guardRecordBtn" onclick="recordFromGuard()">🍽️ 记下这一餐</button>
+    <button class="modal-btn primary" id="guardAbandonBtn" style="display:none" onclick="abandonFromGuard()">🚫 放弃食用</button>
+    <button class="modal-btn secondary" onclick="closeModal('guardModal')">📷 再拍 / 加一样</button>
+    <button class="modal-btn secondary" onclick="genReport()">📤 生成安全报告卡片</button>
+  </div>
+</div>
+
+<!-- 添加家人 -->
+<div class="modal-overlay" id="addMemberModal">
+  <div class="modal-content">
+    <h3>💗 添加家人</h3>
+    <div class="input-group"><label>称呼</label><input id="memName" placeholder="如：妈妈" maxlength="8"></div>
+    <div class="input-group"><label>关系</label><input id="memRel" placeholder="如：母亲" maxlength="8"></div>
+    <div class="section-label">头像</div>
+    <div class="emoji-pick" id="memEmoji"></div>
+    <div class="section-label">慢性疾病（点选，用于安全判断）</div>
+    <div class="chips" id="memDiseaseChips"></div>
+    <div class="section-label">正在服用药品（点选）</div>
+    <div class="chips" id="memMedChips"></div>
+    <div class="input-group" style="margin-top:10px"><label>备注（可选）</label><input id="memNote" placeholder="如：需低盐饮食" maxlength="20"></div>
+    <button class="modal-btn primary ok" onclick="saveMember()">保存家人</button>
+    <button class="modal-btn secondary" onclick="closeModal('addMemberModal')">取消</button>
+  </div>
+</div>
+
+<!-- 为家人记录 -->
+<div class="modal-overlay" id="recordForModal">
+  <div class="modal-content">
+    <h3 id="forTitle">为家人记录</h3>
+    <div id="forProfile" class="rec-foods" style="margin-bottom:8px"></div>
+    <div id="forResult"></div>
+    <div class="section-label">点选这一餐吃的</div>
+    <div class="food-grid" id="forFoodGrid"></div>
+    <div class="plate" id="forPlate"></div>
+    <button class="modal-btn primary" style="background:linear-gradient(135deg,#0f9b8e,#143c5c)" onclick="forCheck()">🛡️ 为TA安全检查</button>
+    <button class="modal-btn secondary" onclick="closeModal('recordForModal')">取消</button>
+  </div>
+</div>
+
+<!-- 安全报告卡片 -->
+<div class="modal-overlay" id="reportModal">
+  <div class="modal-content">
+    <h3>📤 饮食安全报告</h3>
+    <img id="reportImg" alt="安全报告" style="display:block;margin:0 auto;max-width:100%;max-height:66vh;border-radius:12px;border:1px solid #eee">
+    <a class="modal-btn primary ok" id="reportSave" download="饮食安全报告.png" style="display:block;text-align:center;text-decoration:none">⬇️ 保存图片</a>
+    <button class="modal-btn secondary" onclick="closeModal('reportModal')">关闭</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
+<script src="app.js"></script>
+<script>
+  // ===== 状态 =====
+  const DISEASES = ['高血压', '糖尿病', '痛风', '高血脂', '肾病'];
+  const MEDS = ['华法林', '硝苯地平', '阿托伐他汀', '二甲双胍', '降压药', '降脂药', '降糖药', '抗生素', '布洛芬', '阿司匹林', '左甲状腺素', '钙片', '铁剂'];
+  const FOOD_PICK = [
+    { name: '西兰花', emoji: '🥦' }, { name: '菠菜', emoji: '🥬' }, { name: '牛肉', emoji: '🥩' },
+    { name: '鸡肉', emoji: '🍗' }, { name: '米饭', emoji: '🍚' }, { name: '海鲜', emoji: '🦐' },
+    { name: '动物内脏', emoji: '🫀' }, { name: '啤酒', emoji: '🍺' }, { name: '西柚', emoji: '🍊' },
+    { name: '苹果', emoji: '🍎' }, { name: '香蕉', emoji: '🍌' }, { name: '鸡蛋', emoji: '🥚' },
+    { name: '豆腐', emoji: '🍲' }, { name: '红薯', emoji: '🍠' }, { name: '牛奶', emoji: '🥛' }, { name: '全麦面包', emoji: '🍞' }
+  ];
+
+  const todayStr = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const defaultState = () => ({
+    profile: { chronic_diseases: [], medications: [] },
+    customDiseases: [], customMeds: [],
+    today: [],      // {name, weight, cal, time}
+    history: [],    // {time, overall, count, red}
+    records: [],    // {id, time, foods:[{name,weight,cal}], totalCal, warnings}
+    totalRecog: 0,
+    family: [],     // {id,name,relation,emoji,note,diseases:[],meds:[],today:[]}
+    stats: { date: todayStr(), count: 0 }
+  });
+  let state = defaultState();
+  let plate = [];  // {name, weight}
+  // 每个手机号独立存储，避免不同账号数据串到一起
+  function currentUser() { return localStorage.getItem('saj_current') || ''; }
+  function stateKey() { return 'saj_state_' + (currentUser() || 'guest'); }
+  function save() { try { localStorage.setItem(stateKey(), JSON.stringify(state)); } catch (e) {} }
+  function load() {
+    state = defaultState();
+    try {
+      const raw = localStorage.getItem(stateKey());
+      if (raw) {
+        const s = JSON.parse(raw);
+        state = Object.assign(defaultState(), s);
+        state.profile = Object.assign({ chronic_diseases: [], medications: [] }, s.profile || {});
+      }
+    } catch (e) {}
+    if (state.stats.date !== todayStr()) { state.stats = { date: todayStr(), count: 0 }; state.today = []; }
+  }
+
+  // ===== 登录 / 注册（本地演示，无后端） =====
+  const USERS_KEY = 'saj_users';
+  function getUsers() { try { return JSON.parse(localStorage.getItem(USERS_KEY)) || []; } catch (e) { return []; } }
+  function saveUsers(u) { localStorage.setItem(USERS_KEY, JSON.stringify(u)); }
+  let _codeTimer = null;
+  const validPhone = p => /^1\d{10}$/.test(p);
+  async function tryCloud(path, body) { try { const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) }); return await r.json(); } catch (e) { return { network: true }; } }
+  function switchAuth(mode) {
+    document.getElementById('tabLogin').classList.toggle('active', mode === 'login');
+    document.getElementById('tabReg').classList.toggle('active', mode === 'register');
+    document.getElementById('loginPanel').style.display = mode === 'login' ? 'block' : 'none';
+    document.getElementById('registerPanel').style.display = mode === 'register' ? 'block' : 'none';
+    hideError();
+  }
+  function switchLoginMode(mode) {
+    document.getElementById('subCode').classList.toggle('active', mode === 'code');
+    document.getElementById('subPwd').classList.toggle('active', mode === 'pwd');
+    document.getElementById('loginCodeMode').style.display = mode === 'code' ? 'block' : 'none';
+    document.getElementById('loginPwdMode').style.display = mode === 'pwd' ? 'block' : 'none';
+    hideError();
+  }
+  function showErr(m) { const e = document.getElementById('loginError'); e.textContent = m; e.style.display = 'block'; }
+  function hideError() { document.getElementById('loginError').style.display = 'none'; }
+  async function sendCode(which) {
+    hideError();
+    const phone = (which === 'login' ? document.getElementById('loginPhone').value : document.getElementById('regPhone').value).trim();
+    if (!validPhone(phone)) return showErr('请输入正确的11位手机号');
+    const _c = await tryCloud('/api/auth/exists', { phone });
+    const registered = _c.network ? getUsers().some(u => u.phone === phone) : _c.exists;
+    if (which === 'login' && !registered) return showErr('该手机号未注册，请先注册');
+    if (which === 'reg' && registered) return showErr('该手机号已注册，请直接登录');
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    localStorage.setItem('saj_smscode', JSON.stringify({ phone, code, exp: Date.now() + 5 * 60 * 1000 }));
+    const banner = document.getElementById('codeBanner');
+    banner.textContent = '📱 演示验证码：' + code + '（5分钟内有效，真实环境由短信下发）';
+    banner.classList.remove('hidden');
+    const btn = document.getElementById(which === 'login' ? 'loginCodeBtn' : 'regCodeBtn');
+    let t = 60; btn.disabled = true; btn.textContent = t + 's';
+    clearInterval(_codeTimer);
+    _codeTimer = setInterval(() => {
+      t--; if (t <= 0) { clearInterval(_codeTimer); btn.disabled = false; btn.textContent = '获取验证码'; } else btn.textContent = t + 's';
+    }, 1000);
+  }
+  function checkCode(phone, input) {
+    let s = null; try { s = JSON.parse(localStorage.getItem('saj_smscode')); } catch (e) {}
+    if (!s || s.phone !== phone) return '请先获取验证码';
+    if (Date.now() > s.exp) return '验证码已过期，请重新获取';
+    if (String(input).trim() !== s.code) return '验证码错误，请检查';
+    return null;
+  }
+  async function handleCodeLogin() {
+    hideError();
+    const phone = document.getElementById('loginPhone').value.trim();
+    const code = document.getElementById('loginCode').value.trim();
+    if (!validPhone(phone)) return showErr('请输入正确的11位手机号');
+    const err = checkCode(phone, code); if (err) return showErr(err);
+    const c = await tryCloud('/api/auth/codelogin', { phone });
+    if (c.network) { enterApp(phone, 'local'); return; }
+    if (!c.ok) return showErr(c.error || '登录失败');
+    enterApp(phone, c.token);
+  }
+  async function handlePwdLogin() {
+    hideError();
+    const phone = document.getElementById('pwdPhone').value.trim();
+    const pwd = document.getElementById('pwdInput').value;
+    if (!validPhone(phone)) return showErr('请输入正确的11位手机号');
+    if (!pwd) return showErr('请输入密码');
+    const c = await tryCloud('/api/auth/login', { phone, pwd });
+    if (c.network) { const u = getUsers().find(x => x.phone === phone); if (!u) return showErr('该手机号未注册，请先注册'); if (u.pwd && u.pwd !== pwd) return showErr('密码错误'); enterApp(phone, 'local'); return; }
+    if (!c.ok) return showErr(c.error);
+    enterApp(phone, c.token);
+  }
+  async function handleRegister() {
+    hideError();
+    const phone = document.getElementById('regPhone').value.trim();
+    const code = document.getElementById('regCode').value.trim();
+    const p1 = document.getElementById('regPwd').value, p2 = document.getElementById('regPwd2').value;
+    if (!validPhone(phone)) return showErr('请输入正确的11位手机号');
+    const err = checkCode(phone, code); if (err) return showErr(err);
+    if (p1.length < 6) return showErr('密码至少6位');
+    if (p1 !== p2) return showErr('两次输入的密码不一致');
+    if (!document.getElementById('regAgree').checked) return showErr('请先同意用户协议和隐私政策');
+    const c = await tryCloud('/api/auth/register', { phone, pwd: p1 });
+    if (c.network) { const users = getUsers(); if (users.find(u => u.phone === phone)) return showErr('该手机号已注册，请直接登录'); users.push({ phone, pwd: p1 }); saveUsers(users); enterApp(phone, 'local'); return; }
+    if (!c.ok) return showErr(c.error);
+    toast('✅ 注册成功，已自动登录');
+    enterApp(phone, c.token);
+  }
+  function enterApp(phone, token) {
+    localStorage.setItem('saj_token', token || 'local');
+    localStorage.setItem('saj_current', phone);   // 记录当前登录用户（用于数据隔离）
+    const masked = phone.slice(0, 3) + '****' + phone.slice(7);
+    localStorage.setItem('saj_phone', masked);
+    load();  // 载入该用户自己的数据
+    renderChips(); renderToday(); renderHistory(); renderRecords(); renderFamily(); renderCloudFamily();
+    document.getElementById('userSub').textContent = `用户：${masked} | 今日识别：${state.stats.count} 次`;
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('appPage').classList.remove('hidden');
+    document.getElementById('profilePage').classList.add('hidden');
+    toast('✅ 登录成功');
+  }
+  // 评委/用户体验入口：免注册进入演示账号，并预填示例数据
+  async function enterDemo() {
+    const phone = '13800000000';
+    const _c = await tryCloud('/api/auth/codelogin', { phone });
+    localStorage.setItem('saj_token', _c.ok ? _c.token : 'local');
+    localStorage.setItem('saj_current', phone);
+    localStorage.setItem('saj_phone', '138****0000');
+    load();
+    if (state.today.length === 0 && state.records.length === 0) {
+      state.profile.chronic_diseases = ['痛风'];
+      state.profile.medications = ['华法林'];
+      state.stats.count = 3; state.totalRecog = 12;
+      state.today = [
+        { name: '蒜香豌豆', weight: 100, cal: 400, time: '12:10', nutrition: { cal: 400, protein: 15, fat: 20, carb: 50, sodium: 200, sugar: 10, fiber: 5 } },
+        { name: '米饭', weight: 200, cal: 232, time: '12:10', nutrition: null },
+        { name: '啤酒', weight: 330, cal: 143, time: '12:30', nutrition: null }
+      ];
+      state.records = [
+        { id: Date.now(), time: new Date().toLocaleString('zh-CN'), foods: state.today.map(m => ({ name: m.name, weight: m.weight, cal: m.cal })), totalCal: 775, warnings: 2 },
+        { id: Date.now() - 1, time: new Date(Date.now() - 7200e3).toLocaleString('zh-CN'), foods: [{ name: '西柚', weight: 200, cal: 84 }], totalCal: 84, warnings: 1 }
+      ];
+      state.family = [
+        { id: 1, name: '妈妈', relation: '母亲', emoji: '👵', note: '需低盐', diseases: ['高血压'], meds: ['降压药'], today: [{ name: '米饭', weight: 150, cal: 174, time: '12:00' }, { name: '咸菜', weight: 50, cal: 30, time: '12:00' }] },
+        { id: 2, name: '爸爸', relation: '父亲', emoji: '👴', note: '', diseases: ['痛风'], meds: [], today: [] }
+      ];
+      save();
+    }
+    renderChips(); renderToday(); renderHistory(); renderRecords(); renderCloudFamily();
+    document.getElementById('userSub').textContent = '用户：138****0000 | 今日识别：' + (state.stats.count || 0) + ' 次';
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('appPage').classList.remove('hidden');
+    document.getElementById('profilePage').classList.add('hidden');
+    toast('🎁 已进入演示账号，可直接体验');
+  }
+
+  // ===== 档案 =====
+  function renderChips() {
+    const diseases = DISEASES.concat(state.customDiseases);
+    const meds = MEDS.concat(state.customMeds);
+    document.getElementById('diseaseChips').innerHTML = diseases.map(d =>
+      `<div class="chip ${state.profile.chronic_diseases.includes(d) ? 'on' : ''}" onclick="toggleDisease('${d}')">${d}</div>`).join('');
+    document.getElementById('medChips').innerHTML = meds.map(m =>
+      `<div class="chip ${state.profile.medications.includes(m) ? 'on' : ''}" onclick="toggleMed('${m}')">${m}</div>`).join('');
+  }
+  function toggleDisease(d) {
+    const i = state.profile.chronic_diseases.indexOf(d);
+    if (i >= 0) state.profile.chronic_diseases.splice(i, 1); else state.profile.chronic_diseases.push(d);
+    save(); renderChips();
+  }
+  function toggleMed(m) {
+    const i = state.profile.medications.indexOf(m);
+    if (i >= 0) state.profile.medications.splice(i, 1); else state.profile.medications.push(m);
+    save(); renderChips();
+  }
+  function addCustomDisease() {
+    const inp = document.getElementById('customDiseaseInput');
+    const v = (inp.value || '').trim();
+    if (!v) return toast('请输入疾病名称');
+    if (DISEASES.includes(v) || state.customDiseases.includes(v)) { inp.value = ''; return toast('该疾病已在列表'); }
+    state.customDiseases.push(v); state.profile.chronic_diseases.push(v);
+    inp.value = ''; save(); renderChips(); toast('已添加并选中：' + v);
+  }
+  function addCustomMed() {
+    const inp = document.getElementById('customMedInput');
+    const v = (inp.value || '').trim();
+    if (!v) return toast('请输入药品名称');
+    if (MEDS.includes(v) || state.customMeds.includes(v)) { inp.value = ''; return toast('该药品已在列表'); }
+    state.customMeds.push(v); state.profile.medications.push(v);
+    inp.value = ''; save(); renderChips(); toast('已添加并选中：' + v);
+  }
+
+  // ===== 亲情关怀（家人）=====
+  const MEMBER_EMOJIS = ['👴', '👵', '🧓', '👨', '👩', '👦', '👧'];
+  let _memEmoji = '👵', _memD = [], _memM = [], forPlate = [], _forMember = null;
+  function renderFamily() {
+    const el = document.getElementById('familyList');
+    if (!state.family.length) { el.innerHTML = '<div class="meal-desc" style="text-align:center;padding:10px;color:#bbb">还没有家人，点右上角"添加家人"</div>'; return; }
+    el.innerHTML = state.family.map(m => {
+      const cal = m.today.reduce((s, x) => s + (x.cal || 0), 0);
+      const ana = analyzeContraindications(m.today, { chronic_diseases: m.diseases, medications: m.meds });
+      const last = m.today.length ? m.today[m.today.length - 1].time : '还未记录';
+      const st = ana.overall === 'red' ? `🚨 ${ana.warnings.length}条风险` : ana.overall === 'yellow' ? `⚠️ ${ana.warnings.length}条提醒` : '✅ 正常';
+      const prof = (m.diseases.concat(m.meds)).join('、') || '未设档案';
+      return `<div class="fam-item"><div class="fam-av">${m.emoji}</div><div class="fam-info"><div class="fam-name">${m.name}<span class="fam-rel">${m.relation}</span></div><div class="fam-sub">${prof}</div><div class="fam-sub">今日 ${cal} kcal · ${st} · ${last}</div></div><div class="fam-acts"><button class="rec" onclick="recordFor('${m.id}')">为TA记录</button><button class="rem" onclick="remindMember('${m.id}')">提醒TA</button></div></div>`;
+    }).join('');
+  }
+  function openAddMember() {
+    _memEmoji = '👵'; _memD = []; _memM = [];
+    document.getElementById('memName').value = ''; document.getElementById('memRel').value = ''; document.getElementById('memNote').value = '';
+    document.getElementById('memEmoji').innerHTML = MEMBER_EMOJIS.map(e => `<div class="emoji-opt ${e === _memEmoji ? 'on' : ''}" onclick="pickMemEmoji('${e}')">${e}</div>`).join('');
+    document.getElementById('memDiseaseChips').innerHTML = DISEASES.map(d => `<div class="chip" onclick="toggleMemChip('d','${d}',this)">${d}</div>`).join('');
+    document.getElementById('memMedChips').innerHTML = MEDS.map(m => `<div class="chip" onclick="toggleMemChip('m','${m}',this)">${m}</div>`).join('');
+    document.getElementById('addMemberModal').classList.add('active');
+  }
+  function pickMemEmoji(e) { _memEmoji = e; document.querySelectorAll('#memEmoji .emoji-opt').forEach(x => x.classList.toggle('on', x.textContent === e)); }
+  function toggleMemChip(kind, val, el) { const arr = kind === 'd' ? _memD : _memM; const i = arr.indexOf(val); if (i >= 0) arr.splice(i, 1); else arr.push(val); el.classList.toggle('on'); }
+  function saveMember() {
+    const name = document.getElementById('memName').value.trim();
+    const rel = document.getElementById('memRel').value.trim() || '家人';
+    if (!name) return toast('请填写称呼');
+    state.family.push({ id: Date.now(), name, relation: rel, emoji: _memEmoji, note: document.getElementById('memNote').value.trim(), diseases: _memD.slice(), meds: _memM.slice(), today: [] });
+    save(); renderFamily(); closeModal('addMemberModal'); toast('✅ 已添加家人：' + name);
+  }
+  function recordFor(id) {
+    _forMember = state.family.find(m => String(m.id) === String(id)); if (!_forMember) return;
+    forPlate = []; document.getElementById('forResult').innerHTML = '';
+    document.getElementById('forTitle').textContent = '为 ' + _forMember.emoji + ' ' + _forMember.name + ' 记录';
+    document.getElementById('forProfile').textContent = '档案：' + ((_forMember.diseases.concat(_forMember.meds)).join('、') || '未设档案');
+    renderForGrid(); renderForPlate();
+    document.getElementById('recordForModal').classList.add('active');
+  }
+  function renderForGrid() { document.getElementById('forFoodGrid').innerHTML = FOOD_PICK.map(f => `<div class="food-pick ${forPlate.some(p => p.name === f.name) ? 'on' : ''}" onclick="addFoodFor('${f.name}')"><span class="emo">${f.emoji}</span>${f.name}</div>`).join(''); }
+  function addFoodFor(name) { const ex = forPlate.find(p => p.name === name); if (ex) ex.weight += 100; else forPlate.push({ name, weight: 150 }); document.getElementById('forResult').innerHTML = ''; renderForGrid(); renderForPlate(); }
+  function editForWeight(name) { const p = forPlate.find(x => x.name === name); if (!p) return; const v = prompt('修改「' + name + '」重量(克)：', p.weight); const n = Math.round(Number(v)); if (v !== null && n >= 10 && n <= 3000) { p.weight = n; renderForPlate(); } }
+  function removeFor(name) { forPlate = forPlate.filter(p => p.name !== name); document.getElementById('forResult').innerHTML = ''; renderForGrid(); renderForPlate(); }
+  function renderForPlate() {
+    const el = document.getElementById('forPlate');
+    if (!forPlate.length) { el.innerHTML = '<div style="font-size:13px;color:#bbb;text-align:center;padding:6px">未选择食物</div>'; return; }
+    el.innerHTML = forPlate.map(p => `<div class="plate-item"><span>🍽️ ${p.name}</span><span class="plate-ctrl"><span class="wt" onclick="editForWeight('${p.name}')">${p.weight}g ✏️</span><span class="x" onclick="removeFor('${p.name}')">✕</span></span></div>`).join('');
+  }
+  function forCheck() {
+    if (!forPlate.length) return toast('请先点选食物');
+    const { total, details } = calculateNutrients(forPlate);
+    const ana = analyzeContraindications(forPlate, { chronic_diseases: _forMember.diseases, medications: _forMember.meds });
+    const red = ana.overall === 'red', yellow = ana.overall === 'yellow';
+    let html = `<div style="font-size:34px;text-align:center">${red ? '🚨' : yellow ? '⚠️' : '✅'}</div>`;
+    html += `<div style="text-align:center;font-weight:700;margin:4px 0 8px">${red ? '对' + _forMember.name + '有风险' : yellow ? '有潜在风险' : '这一餐对TA安全'}</div>`;
+    html += details.map(d => `<div class="result-food"><span>${d.name} · ${d.weight}g</span><span>${d.cal} kcal</span></div>`).join('');
+    html += `<div class="result-food" style="font-weight:700;color:#e67e22"><span>合计</span><span>${total.cal} kcal</span></div>`;
+    if (ana.warnings.length) ana.warnings.forEach(w => { html += `<div class="warn-item ${w.risk}"><strong>${w.type}</strong>：${w.trigger}${w.food_name !== '-' ? ' × ' + w.food_name : ''}<br>💡 ${w.advice}</div>`; });
+    html += `<button class="modal-btn primary ok" onclick="forRecord()">🍽️ 记到${_forMember.name}名下</button>`;
+    document.getElementById('forResult').innerHTML = html;
+  }
+  function forRecord() {
+    const { details } = calculateNutrients(forPlate);
+    const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    details.forEach(d => _forMember.today.push({ name: d.name, weight: d.weight, cal: d.cal, time }));
+    save(); renderFamily(); closeModal('recordForModal'); toast('✅ 已记录到 ' + _forMember.name + ' 名下');
+  }
+  function remindMember(id) {
+    const m = state.family.find(x => String(x.id) === String(id)); if (!m) return;
+    toast('💗 已发送关怀提醒给 ' + m.name + '（演示）：记得按时吃药、注意饮食哦');
+  }
+  async function cloudLink() {
+    const token = localStorage.getItem('saj_token');
+    if (!token || token === 'local') return toast('请先登录/注册后再关联家人');
+    const toPhone = document.getElementById('linkPhone').value.trim();
+    const toPwd = document.getElementById('linkPwd').value;
+    if (!/^1\d{10}$/.test(toPhone)) return toast('请输入正确的家人手机号');
+    if (!toPwd) return toast('请输入对方密码');
+    try {
+      const r = await fetch('/api/link', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-token': token }, body: JSON.stringify({ toPhone, toPwd }) });
+      const d = await r.json();
+      if (!d.ok) return toast(d.error || '关联失败');
+      document.getElementById('linkPwd').value = '';
+      toast('✅ 关联成功'); renderCloudFamily();
+    } catch (e) { toast('网络异常，关联失败'); }
+  }
+  async function renderCloudFamily() {
+    const el = document.getElementById('cloudFamily'); if (!el) return;
+    const token = localStorage.getItem('saj_token');
+    if (!token || token === 'local') { el.innerHTML = '<div class="prof-empty">登录/注册后即可关联家人、查看 TA 的今日饮食</div>'; return; }
+    try {
+      const r = await fetch('/api/family', { headers: { 'x-token': token } });
+      const d = await r.json();
+      if (!d.ok) { el.innerHTML = '<div class="prof-empty">' + (d.error || '获取失败') + '</div>'; return; }
+      if (!d.family.length) { el.innerHTML = '<div class="prof-empty">还没有关联家人，上方输入对方账号密码即可关联</div>'; return; }
+      el.innerHTML = d.family.map(f => {
+        const items = f.meals.length ? f.meals.map(m => `<div class="fam-sub">· ${m.time}　${m.foods.map(x => x.name + ' ' + x.weight + 'g').join('、')}（${m.totalCal}kcal${m.warnings ? ' ⚠️' + m.warnings : ''}）</div>`).join('') : '<div class="fam-sub">今天还没有记录</div>';
+        return `<div class="fam-item"><div class="fam-av">👤</div><div class="fam-info"><div class="fam-name">${f.name}<span class="fam-rel">云端</span></div><div class="fam-sub">今日 ${f.totalCal} kcal · ${f.warnings ? '⚠️ ' + f.warnings + '条风险' : '✅ 正常'}</div>${items}</div></div>`;
+      }).join('');
+    } catch (e) { el.innerHTML = '<div class="prof-empty">网络异常，无法获取家人数据</div>'; }
+  }
+
+  // ===== 识别 =====
+  let cameraStream = null;
+  function openScan() {
+    plate = [];
+    renderFoodGrid();
+    renderPlate();
+    closeCamera();
+    const img = document.getElementById('imgPreview'); img.classList.add('hidden'); img.style.display = 'none';
+    document.getElementById('recogStatus').classList.add('hidden');
+    document.getElementById('scanModal').classList.add('active');
+  }
+  function isMobileDevice() {
+    return /Android|iPhone|iPad|iPod|Mobile|HarmonyOS|MicroMessenger|MiuiBrowser/i.test(navigator.userAgent);
+  }
+  function isSecure() {
+    return location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  }
+  function openCamera() {
+    // 手机：直接调起系统相机（capture 在 http 下也能用，最稳）
+    if (isMobileDevice()) { document.getElementById('cameraInput').click(); return; }
+    // 桌面安全上下文(https / localhost)：实时摄像头预览
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && isSecure()) {
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+        .then(st => {
+          cameraStream = st;
+          const v = document.getElementById('cam');
+          v.srcObject = st; v.play();
+          document.getElementById('camWrap').classList.remove('hidden');
+        })
+        .catch(e => { document.getElementById('cameraInput').click(); toast('摄像头打开失败（' + e.message + '），已改为选图'); });
+      return;
+    }
+    // 桌面非安全地址(http 局域网)：浏览器禁用实时摄像头，引导用 localhost
+    document.getElementById('cameraInput').click();
+    toast('当前地址浏览器禁用了摄像头。请在电脑地址栏改为 http://localhost:8081 打开本页即可使用摄像头');
+  }
+  function closeCamera() {
+    if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+    document.getElementById('camWrap').classList.add('hidden');
+  }
+  function takePhoto() {
+    const v = document.getElementById('cam');
+    if (!v.videoWidth) { toast('摄像头尚未就绪'); return; }
+    const c = document.createElement('canvas');
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v, 0, 0);
+    const url = c.toDataURL('image/jpeg', 0.85);
+    showPreview(url);
+    closeCamera();
+    recognizePhoto(url);
+  }
+  function onFileChange(e) {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => { showPreview(ev.target.result); recognizePhoto(ev.target.result); };
+    r.readAsDataURL(f);
+    e.target.value = '';
+  }
+  function showPreview(url) {
+    const img = document.getElementById('imgPreview');
+    img.src = url; img.classList.remove('hidden'); img.style.display = 'block';
+  }
+  // 合并识别结果到餐盘
+  function addFoods(foods) {
+    foods.forEach(f => {
+      const n = f.name, w = Number(f.weight) || 150, nut = f.nutrition || null;
+      const ex = plate.find(p => p.name === n);
+      if (ex) { ex.weight = w; if (nut) ex.nutrition = nut; } else plate.push({ name: n, weight: w, nutrition: nut });
+    });
+    renderFoodGrid(); renderPlate();
+  }
+
+  // ===== 本地识别兜底（TensorFlow.js MobileNet，无需任何密钥）=====
+  const IMAGENET_FOOD_MAP = {
+    'broccoli': '西兰花', 'cauliflower': '菜花', 'cucumber': '黄瓜', 'bell pepper': '青椒',
+    'mushroom': '蘑菇', 'zucchini': '西葫芦', 'spaghetti squash': '南瓜', 'acorn squash': '南瓜',
+    'butternut squash': '南瓜', 'head cabbage': '白菜', 'cabbage': '白菜', 'corn': '玉米',
+    'mashed potato': '土豆', 'banana': '香蕉', 'granny smith': '苹果', 'strawberry': '草莓',
+    'orange': '橙子', 'lemon': '柠檬', 'pineapple': '菠萝', 'pomegranate': '石榴', 'fig': '无花果',
+    'french loaf': '面包', 'bagel': '面包', 'pretzel': '面包', 'pizza': '披萨',
+    'cheeseburger': '汉堡', 'hotdog': '热狗', 'meat loaf': '肉饼', 'carbonara': '意面',
+    'lasagna': '意面', 'burrito': '卷饼', 'potpie': '馅饼', 'guacamole': '牛油果酱',
+    'ice cream': '冰淇淋', 'espresso': '咖啡', 'red wine': '红酒', 'beer': '啤酒'
+  };
+  let _mnModel = null;
+  function loadImageEl(url) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('图片加载失败'));
+      img.src = url;
+    });
+  }
+  async function getMobileNet() {
+    if (_mnModel) return _mnModel;
+    if (typeof tf === 'undefined' || typeof mobilenet === 'undefined') throw new Error('本地模型未加载（请检查网络）');
+    await tf.ready();
+    _mnModel = await mobilenet.load();
+    return _mnModel;
+  }
+  async function localRecognize(dataUrl) {
+    const model = await getMobileNet();
+    const img = await loadImageEl(dataUrl);
+    const preds = await model.classify(img, 5);
+    const foods = []; const seen = new Set();
+    for (const p of preds) {
+      if (p.probability < 0.08) continue;
+      const raw = (p.className || '').split(',')[0].trim().toLowerCase();
+      const cn = IMAGENET_FOOD_MAP[raw];
+      if (cn && !seen.has(cn)) { seen.add(cn); foods.push({ name: cn, weight: 150 }); }
+    }
+    return { foods, preds };
+  }
+
+  function recognizePhoto(dataUrl) {
+    const st = document.getElementById('recogStatus');
+    const showStatus = (t) => { st.classList.remove('hidden'); st.textContent = t; };
+    const hideStatus = () => st.classList.add('hidden');
+    showStatus('🔍 正在识别中…');
+    fetch('/api/recognize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: dataUrl }) })
+      .then(r => r.json())
+      .then(async r => {
+        if (r.enabled !== false) {
+          const foods = (r.foods && Array.isArray(r.foods)) ? r.foods : [];
+          hideStatus();
+          if (foods.length === 0) { toast('未识别到食物，可手动添加'); return; }
+          addFoods(foods);
+          bumpRecogCount();
+          preCheck();
+          toast('识别到 ' + foods.length + ' 种食物' + (r.engine === 'local' ? '（本地AI模型）' : ''));
+          return;
+        }
+        showStatus('🔍 云端不可用，正在本地识别…');
+        try {
+          const local = await localRecognize(dataUrl);
+          hideStatus();
+          if (local.foods.length === 0) { toast('本地模型未识别到明确食物，请手动补充'); return; }
+          addFoods(local.foods);
+          bumpRecogCount();
+          preCheck();
+          toast('本地识别到 ' + local.foods.length + ' 种食物');
+        } catch (e) { hideStatus(); toast('本地识别失败：' + e.message); }
+      })
+      .catch(async () => {
+        showStatus('🔍 正在本地识别…');
+        try {
+          const local = await localRecognize(dataUrl);
+          hideStatus();
+          if (local.foods.length === 0) { toast('本地模型未识别到明确食物，请手动补充'); return; }
+          addFoods(local.foods);
+          bumpRecogCount();
+          preCheck();
+          toast('本地识别到 ' + local.foods.length + ' 种食物');
+        } catch (e) { hideStatus(); toast('本地识别失败：' + e.message); }
+      });
+  }
+  function renderFoodGrid() {
+    document.getElementById('foodGrid').innerHTML = FOOD_PICK.map(f =>
+      `<div class="food-pick ${plate.some(p => p.name === f.name) ? 'on' : ''}" onclick="addFood('${f.name}')"><span class="emo">${f.emoji}</span>${f.name}</div>`
+    ).join('');
+  }
+  function addFood(name) {
+    const exist = plate.find(p => p.name === name);
+    if (exist) exist.weight += 100; else plate.push({ name, weight: 150 });
+    renderFoodGrid(); renderPlate();
+  }
+  function removeFood(name) { plate = plate.filter(p => p.name !== name); renderFoodGrid(); renderPlate(); }
+  function editPlateWeight(name) {
+    const p = plate.find(x => x.name === name); if (!p) return;
+    const v = prompt('修改「' + name + '」的重量（克）：', p.weight);
+    const n = Math.round(Number(v));
+    if (v !== null && n >= 10 && n <= 3000) { p.weight = n; renderPlate(); }
+  }
+  function renderPlate() {
+    const el = document.getElementById('plate');
+    if (plate.length === 0) { el.innerHTML = '<div style="font-size:13px;color:#bbb;text-align:center;padding:6px">未选择食物</div>'; return; }
+    el.innerHTML = plate.map(p =>
+      `<div class="plate-item"><span>🍽️ ${p.name}</span>
+        <span class="plate-ctrl"><span class="wt" onclick="editPlateWeight('${p.name}')">${p.weight}g ✏️</span><span class="x" onclick="removeFood('${p.name}')">✕</span></span></div>`
+    ).join('');
+  }
+  function applyScenario(key) {
+    const map = {
+      zhang: [{ name: '西兰花', weight: 200 }, { name: '牛肉', weight: 150 }, { name: '米饭', weight: 300 }],
+      seafood: [{ name: '海鲜', weight: 200 }, { name: '啤酒', weight: 330 }],
+      grapefruit: [{ name: '西柚', weight: 200 }],
+      healthy: [{ name: '鸡肉', weight: 150 }, { name: '菠菜', weight: 120 }, { name: '红薯', weight: 200 }, { name: '苹果', weight: 150 }]
+    };
+    // 同步档案
+    if (key === 'zhang') { state.profile.chronic_diseases = ['痛风']; state.profile.medications = ['华法林']; }
+    if (key === 'seafood') { state.profile.chronic_diseases = ['痛风']; state.profile.medications = []; }
+    if (key === 'grapefruit') { state.profile.chronic_diseases = []; state.profile.medications = ['降压药']; }
+    if (key === 'healthy') { state.profile.chronic_diseases = []; state.profile.medications = []; }
+    renderChips();
+    plate = map[key].map(x => ({ ...x }));
+    renderFoodGrid(); renderPlate();
+    toast('场景已载入，可继续调整');
+  }
+  function runAnalyze() {
+    if (plate.length === 0) return toast('请先选择食物');
+    const { total, details } = calculateNutrients(plate);
+    const ana = analyzeContraindications(plate, state.profile);
+    // 结果弹窗
+    let html = details.map(d => `<div class="result-food"><span>${d.name} · ${d.weight}g</span><span>${d.cal} kcal</span></div>`).join('');
+    html += `<div class="result-food" style="font-weight:700;color:#e67e22"><span>合计</span><span>${total.cal} kcal</span></div>`;
+    const unknown = state.profile.medications.filter(m => !DRUG_FOOD_RULES[m]).concat(state.profile.chronic_diseases.filter(d => !DISEASE_FOOD_RULES[d]));
+    if (unknown.length) html += `<div style="font-size:12px;color:#999;margin-top:8px;line-height:1.6">💡 以下项目暂无对应禁忌规则，本次仅作记录：${unknown.join('、')}</div>`;
+    document.getElementById('resultBody').innerHTML = html;
+    document.getElementById('resultModal').classList.add('active');
+    // 暂存
+    window._last = { total, ana, details };
+    const btn = document.getElementById('resultWarnBtn');
+    btn.textContent = ana.warnings.length ? '⚠️ 查看预警' : '✅ 完成记录';
+    closeModal('scanModal');
+  }
+  // 记录这一餐（今日饮食 + 识别历史），供多处复用
+  function doRecord(total, ana, details) {
+    const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    details.forEach(d => state.today.push({ name: d.name, weight: d.weight, cal: d.cal, time, nutrition: d.nutrition || null }));
+    state.records.unshift({ id: Date.now(), time: new Date().toLocaleString('zh-CN'), foods: details.map(d => ({ name: d.name, weight: d.weight, cal: d.cal })), totalCal: total.cal, warnings: ana.warnings.length });
+    if (state.records.length > 100) state.records.length = 100;
+    save();
+    renderToday(); renderRecords(); updateSub();
+    const _tk = localStorage.getItem('saj_token');
+    if (_tk && _tk !== 'local') { fetch('/api/meal', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-token': _tk }, body: JSON.stringify({ foods: details.map(d => ({ name: d.name, weight: d.weight, cal: d.cal })), totalCal: total.cal, warnings: ana.warnings.length }) }).catch(() => {}); }
+    }
+  function afterResult() {
+    closeModal('resultModal');
+    const { total, ana, details } = window._last;
+    doRecord(total, ana, details);
+    if (ana.warnings.length === 0) { toast('✅ 未发现禁忌'); return; }
+    showWarnModal(ana);
+  }
+  // ===== 食用前安全守门员：识别后立即给出禁忌结论 =====
+  function preCheck() {
+    if (plate.length === 0) { toast('请先选择或拍摄食物'); return; }
+    const { total, details } = calculateNutrients(plate);
+    const ana = analyzeContraindications(plate, state.profile);
+    window._last = { total, ana, details };
+    const red = ana.overall === 'red', yellow = ana.overall === 'yellow';
+    document.getElementById('guardIcon').textContent = red ? '🚨' : yellow ? '⚠️' : '✅';
+    document.getElementById('guardTitle').textContent = red ? '食用前警示：存在风险' : yellow ? '食用前提醒：潜在风险' : '食用前安全扫描：通过';
+    let html = details.map(d => `<div class="result-food"><span>${d.name} · ${d.weight}g</span><span>${d.cal} kcal</span></div>`).join('');
+    html += `<div class="result-food" style="font-weight:700;color:#e67e22"><span>合计</span><span>${total.cal} kcal</span></div>`;
+    if (ana.warnings.length) {
+      html += '<div style="margin-top:8px">';
+      ana.warnings.forEach(w => {
+        html += `<div class="warn-item ${w.risk}"><strong>${w.type}</strong>：${w.trigger}${w.food_name !== '-' ? ' × ' + w.food_name : ''}<br>💡 ${w.advice}</div>`;
+      });
+      html += '</div><div style="font-size:13px;color:#666;margin-top:6px">' + ana.suggestion + '</div>';
+    } else {
+      html += `<div style="font-size:13px;color:#0f9b8e;margin-top:8px">结合你的健康档案，未发现药食/慢食禁忌，可放心食用。</div>`;
+    }
+    document.getElementById('guardBody').innerHTML = html;
+    document.getElementById('guardRecordBtn').textContent = red ? '✅ 我了解，仍要记录' : '🍽️ 记下这一餐';
+    document.getElementById('guardAbandonBtn').style.display = (red || yellow) ? 'block' : 'none';
+    document.getElementById('guardModal').classList.add('active');
+  }
+  function recordFromGuard() {
+    closeModal('guardModal');
+    const { total, ana, details } = window._last;
+    doRecord(total, ana, details);
+    toast(ana.warnings.length ? '⚠️ 已记录（有风险，注意遵医嘱）' : '✅ 已记录这一餐');
+  }
+  function abandonFromGuard() {
+    closeModal('guardModal');
+    plate = []; renderPlate(); renderFoodGrid(); window._last = null;
+    toast('已放弃食用，未记录');
+  }
+  // ===== 生成可保存/分享的饮食安全报告卡片 =====
+  function _roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+  function _wrapText(ctx, text, x, y, maxW, lh) { let line = '', yy = y; for (const ch of text) { const t = line + ch; if (ctx.measureText(t).width > maxW) { ctx.fillText(line, x, yy); line = ch; yy += lh; } else { line = t; } } if (line) ctx.fillText(line, x, yy); return yy; }
+  function genReport() {
+    let data = window._last;
+    if (!data || !data.details) {
+      if (!plate.length) return toast('请先识别或选择食物');
+      const { total, details } = calculateNutrients(plate);
+      data = { total, ana: analyzeContraindications(plate, state.profile), details };
+    }
+    const { total, ana, details } = data;
+    const red = ana.overall === 'red', yellow = ana.overall === 'yellow';
+    const foods = details.slice(0, 10);
+    const warns = ana.warnings.slice(0, 5);
+    const prof = (state.profile.chronic_diseases.concat(state.profile.medications)).join('、') || '未设置';
+    const W = 660, PAD = 40;
+    // 动态高度：按内容计算，避免大片空白
+    let H = 140 + 16 + 104 + 28 + 44 + foods.length * 40 + 16 + 56 + (warns.length ? (40 + warns.length * 76) : 56) + 56;
+    const cv = document.getElementById('reportCanvas') || (() => { const c = document.createElement('canvas'); c.id = 'reportCanvas'; document.body.appendChild(c); return c; })();
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#eef1f6'; ctx.fillRect(0, 0, W, H);
+    // 头部
+    const grd = ctx.createLinearGradient(0, 0, W, 140); grd.addColorStop(0, '#0f9b8e'); grd.addColorStop(1, '#143c5c');
+    ctx.fillStyle = grd; ctx.fillRect(0, 0, W, 140);
+    ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.font = 'bold 28px sans-serif';
+    ctx.fillText('🛡️ 食安警戒', W / 2, 56);
+    ctx.font = '15px sans-serif'; ctx.globalAlpha = .92;
+    ctx.fillText('饮食安全报告 · ' + new Date().toLocaleDateString('zh-CN'), W / 2, 88);
+    ctx.globalAlpha = 1;
+    // 结论卡
+    let y = 156;
+    ctx.fillStyle = red ? '#fdecea' : yellow ? '#fff8e1' : '#e6f7f4';
+    _roundRect(ctx, PAD, y, W - PAD * 2, 104, 16); ctx.fill();
+    ctx.fillStyle = red ? '#b03a2e' : yellow ? '#9a7d12' : '#0f9b8e'; ctx.font = 'bold 25px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(red ? '🚨 有风险，建议谨慎' : yellow ? '⚠️ 有潜在风险' : '✅ 这一餐安全', W / 2, y + 42);
+    ctx.font = '14px sans-serif'; ctx.fillStyle = '#777';
+    ctx.fillText('健康档案：' + prof, W / 2, y + 76);
+    y += 104 + 28;
+    // 本餐食物
+    ctx.textAlign = 'left'; ctx.fillStyle = '#143c5c'; ctx.font = 'bold 20px sans-serif';
+    ctx.fillText('本餐食物', PAD, y); y += 32;
+    ctx.font = '17px sans-serif'; ctx.fillStyle = '#333';
+    foods.forEach(d => {
+      ctx.fillText('· ' + d.name, PAD + 8, y);
+      ctx.textAlign = 'right'; ctx.fillStyle = '#e67e22'; ctx.fillText(d.weight + 'g / ' + d.cal + 'kcal', W - PAD - 8, y);
+      ctx.textAlign = 'left'; ctx.fillStyle = '#333'; y += 40;
+    });
+    y += 6; ctx.strokeStyle = '#dfe5ec'; ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke(); y += 34;
+    // 合计
+    ctx.font = 'bold 20px sans-serif'; ctx.fillStyle = '#143c5c'; ctx.fillText('合计热量', PAD + 8, y);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#e67e22'; ctx.font = 'bold 22px sans-serif'; ctx.fillText(total.cal + ' kcal', W - PAD - 8, y);
+    ctx.textAlign = 'left'; y += 40;
+    // 提醒 / 安全
+    if (warns.length) {
+      ctx.font = 'bold 18px sans-serif'; ctx.fillStyle = '#b03a2e'; ctx.fillText('⚠️ 用药/慢食提醒', PAD, y); y += 30;
+      warns.forEach(w => {
+        const line = (w.trigger + (w.food_name !== '-' ? ' × ' + w.food_name : '')) + '：' + w.advice;
+        ctx.font = '14px sans-serif'; ctx.fillStyle = '#555';
+        y = _wrapText(ctx, line, PAD + 8, y, W - PAD * 2 - 16, 22) + 26;
+      });
+    } else {
+      ctx.font = '16px sans-serif'; ctx.fillStyle = '#0f9b8e'; ctx.fillText('✅ 未发现药食/慢食禁忌，可放心食用', PAD + 8, y); y += 40;
+    }
+    // 页脚
+    ctx.textAlign = 'center'; ctx.font = '13px sans-serif'; ctx.fillStyle = '#aaa';
+    ctx.fillText('由「食安警戒」生成 · 仅供参考，请遵医嘱', W / 2, H - 20);
+    const url = cv.toDataURL('image/png');
+    document.getElementById('reportImg').src = url;
+    document.getElementById('reportSave').href = url;
+    document.getElementById('reportModal').classList.add('active');
+  }
+  function showWarnModal(ana) {
+    const c = document.getElementById('warnContent');
+    const icon = ana.overall === 'red' ? '🚨' : ana.overall === 'yellow' ? '⚠️' : '✅';
+    const title = ana.overall === 'red' ? '严重食物-药物相互作用' : ana.overall === 'yellow' ? '潜在风险提醒' : '安全提示';
+    let html = `<div style="font-size:44px;text-align:center;margin-bottom:6px">${icon}</div><h3>${title}</h3>`;
+    ana.warnings.forEach(w => {
+      html += `<div class="warn-item ${w.risk}">
+        <strong>${w.type}</strong>：${w.trigger}${w.food_name !== '-' ? ' × ' + w.food_name : ''}<br>
+        风险等级：<b>${w.risk === 'red' ? '红色(严重)' : w.risk === 'yellow' ? '黄色(注意)' : '蓝色'}</b><br>
+        ${w.mechanism ? '机制：' + w.mechanism + '<br>' : ''}
+        💡 ${w.advice}
+      </div>`;
+    });
+    html += `<div style="font-size:13px;color:#666;margin-top:8px">${ana.suggestion}</div>`;
+    if (ana.overall === 'red') {
+      html += `<button class="modal-btn secondary" onclick="closeWarn(true)">放弃食用并返回</button>
+               <button class="modal-btn primary" onclick="ackWarn()">我已了解，继续记录</button>`;
+    } else {
+      html += `<button class="modal-btn primary ok" onclick="closeWarn(false)">我知道了</button>`;
+    }
+    c.innerHTML = html;
+    document.getElementById('warnModal').classList.add('active');
+    document.getElementById('warnModal')._red = ana.overall === 'red';
+  }
+  function ackWarn() {
+    document.getElementById('warnModal')._ack = true;
+    closeWarn(false);
+  }
+  function closeWarn(abandon) {
+    if (document.getElementById('warnModal')._red && abandon === false && !document.getElementById('warnModal')._ack) {
+      toast('红色预警必须确认（点击“我已了解”）'); return;
+    }
+    // 记录历史
+    const { ana } = window._last;
+    state.history.unshift({ time: new Date().toLocaleString('zh-CN'), overall: ana.overall, count: ana.warnings.length, red: ana.hasRed });
+    renderHistory();
+    document.getElementById('warnModal').classList.remove('active');
+    document.getElementById('warnModal')._ack = false;
+    toast(abandon ? '已放弃本次记录' : '已记录并确认预警');
+  }
+
+  // ===== 今日 / 历史 =====
+  function calFor(name, weight, nutrition) {
+    if (nutrition && nutrition.cal != null) return Math.round(nutrition.cal * weight / 100);
+    const k = matchFood(name);
+    const db = (k && FOOD_DB[k]) ? FOOD_DB[k] : { cal: 100 };
+    return Math.round((db.cal || 0) * weight / 100);
+  }
+  function editTodayWeight(i) {
+    const m = state.today[i]; if (!m) return;
+    const v = prompt('修改「' + m.name + '」的重量（克）：', m.weight);
+    const n = Math.round(Number(v));
+    if (v !== null && n >= 10 && n <= 3000) { m.weight = n; m.cal = calFor(m.name, n, m.nutrition); save(); renderToday(); }
+  }
+  function removeToday(i) { state.today.splice(i, 1); save(); renderToday(); }
+  function renderToday() {
+    const el = document.getElementById('mealList');
+    if (state.today.length === 0) { el.innerHTML = '<div class="meal-desc" style="text-align:center;padding:10px;color:#bbb">还没有记录，去识别第一餐吧</div>'; document.getElementById('todayCal').textContent = '总热量 0 kcal'; return; }
+    let total = 0;
+    el.innerHTML = state.today.map((m, i) => { total += m.cal; return `<div class="meal-item"><div class="meal-icon">🍽️</div><div class="meal-info"><div class="meal-name">${m.name} · ${m.weight}g<span class="meal-edit" onclick="editTodayWeight(${i})">改克数</span><span class="meal-edit" onclick="removeToday(${i})">删除</span></div><div class="meal-desc">${m.time}</div></div><div class="meal-cal">${m.cal} kcal</div></div>`; }).join('');
+    document.getElementById('todayCal').textContent = `总热量 ${total} kcal`;
+  }
+  function renderRecords() {
+    const el = document.getElementById('recordList');
+    if (!state.records.length) { el.innerHTML = '<div class="meal-desc" style="text-align:center;padding:10px;color:#bbb">暂无识别记录</div>'; return; }
+    el.innerHTML = state.records.slice(0, 20).map(r => {
+      const foods = (r.foods || []).map(f => `${f.name} ${f.weight}g/${f.cal}kcal`).join('、');
+      const w = r.warnings ? `⚠️ ${r.warnings}条预警` : '✅ 无预警';
+      return `<div class="rec-item"><div class="rec-head"><span>${r.time}</span><span style="color:#e67e22">${r.totalCal} kcal</span></div><div class="rec-foods">${foods}　${w}</div></div>`;
+    }).join('');
+  }
+  function clearRecords() { state.records = []; save(); renderRecords(); toast('已清空识别记录'); }
+  function bumpRecogCount() {
+    if (state.stats.date !== todayStr()) { state.stats = { date: todayStr(), count: 0 }; state.today = []; }
+    state.stats.count++; state.totalRecog = (state.totalRecog || 0) + 1; save(); updateSub();
+  }
+  function renderHistory() {
+    const el = document.getElementById('historyList');
+    if (state.history.length === 0) { el.innerHTML = '<div class="meal-desc" style="text-align:center;padding:10px;color:#bbb">暂无预警记录</div>'; return; }
+    el.innerHTML = state.history.map(h => `<div class="warn-item ${h.overall}">
+      <strong>${h.time}</strong> · 发现 ${h.count} 条${h.red ? '严重' : ''}预警
+    </div>`).join('');
+  }
+  function clearHistory() { state.history = []; renderHistory(); toast('已清空'); }
+  function updateSub() {
+    const phone = '176****5905';
+    document.getElementById('userSub').textContent = `用户：${phone} | 今日识别：${state.stats.count} 次`;
+  }
+
+  // ===== 个人中心 =====
+  function showView(v) {
+    const home = document.getElementById('appPage');
+    const prof = document.getElementById('profilePage');
+    if (v === 'profile') { home.classList.add('hidden'); prof.classList.remove('hidden'); renderProfile(); }
+    else { prof.classList.add('hidden'); home.classList.remove('hidden'); }
+    window.scrollTo(0, 0);
+  }
+  function renderProfile() {
+    const phone = localStorage.getItem('saj_phone') || '176****5905';
+    document.getElementById('profileSub').textContent = '用户：' + phone;
+    const dz = state.profile.chronic_diseases, md = state.profile.medications;
+    document.getElementById('profileDiseases').innerHTML = dz.length ? dz.map(d => `<span class="prof-tag">${d}</span>`).join('') : '<span class="prof-empty">未设置</span>';
+    document.getElementById('profileMeds').innerHTML = md.length ? md.map(m => `<span class="prof-tag">${m}</span>`).join('') : '<span class="prof-empty">未设置</span>';
+    const calToday = state.today.reduce((s, m) => s + (m.cal || 0), 0);
+    document.getElementById('stRecogToday').textContent = state.stats.count || 0;
+    document.getElementById('stMealToday').textContent = state.today.length;
+    document.getElementById('stCalToday').textContent = Math.round(calToday);
+    document.getElementById('stRecogAll').textContent = state.totalRecog || 0;
+    document.getElementById('stRecords').textContent = state.records.length;
+    document.getElementById('stWarns').textContent = state.records.reduce((s, r) => s + (r.warnings || 0), 0);
+  }
+  function exportData() {
+    try {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = '食安警戒数据_' + todayStr() + '.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      toast('已导出数据');
+    } catch (e) { toast('导出失败：' + e.message); }
+  }
+  // 通用确认弹窗（替代原生 confirm，移动端更稳）
+  let _confirmCb = null;
+  function askConfirm(title, msg, okText, cb) {
+    document.getElementById('confirmTitle').textContent = title || '提示';
+    document.getElementById('confirmMsg').textContent = msg || '';
+    document.getElementById('confirmOk').textContent = okText || '确定';
+    _confirmCb = cb;
+    document.getElementById('confirmModal').classList.add('active');
+  }
+  function confirmOk() { document.getElementById('confirmModal').classList.remove('active'); const cb = _confirmCb; _confirmCb = null; if (cb) cb(); }
+  function confirmCancel() { document.getElementById('confirmModal').classList.remove('active'); _confirmCb = null; }
+  function clearTodayData() {
+    askConfirm('清空今日饮食', '确定清空今日所有饮食记录？', '清空', () => { state.today = []; save(); renderToday(); renderProfile(); toast('已清空今日饮食'); });
+  }
+  function resetAll() {
+    askConfirm('清空全部数据', '将清空本账号所有数据且不可恢复，确定？', '全部清空', () => {
+      try { localStorage.removeItem(stateKey()); } catch (e) {}
+      state = defaultState(); save();
+      renderChips(); renderToday(); renderHistory(); renderRecords(); renderProfile(); updateSub();
+      toast('已清空全部数据');
+    });
+  }
+  function logout() { askConfirm('退出登录', '确定要退出当前账号吗？', '退出登录', doLogout); }
+  function doLogout() {
+    try { localStorage.removeItem('saj_token'); localStorage.removeItem('saj_current'); } catch (e) {}
+    state = defaultState();
+    document.getElementById('appPage').classList.add('hidden');
+    document.getElementById('profilePage').classList.add('hidden');
+    document.getElementById('loginPage').classList.remove('hidden');
+    toast('已退出登录');
+  }
+
+  // ===== 营养评估 =====
+  function openNutrition() {
+    if (state.today.length === 0) { toast('请先识别至少一餐'); return; }
+    const totals = { cal: 0, protein: 0, fat: 0, carb: 0, fiber: 0, sugar: 0, sodium: 0, calcium: 0, vc: 0, iron: 0, purine: 0, chol: 0 };
+    state.today.forEach(m => {
+      const k = matchFood(m.name);
+      const base = (k && FOOD_DB[k]) ? FOOD_DB[k] : {};
+      const r = m.weight / 100;
+      for (const key in totals) {
+        const v = (m.nutrition && m.nutrition[key] != null) ? m.nutrition[key] : base[key];
+        if (v != null) totals[key] += v * r;
+      }
+    });
+    for (const k in totals) totals[k] = Math.round(totals[k] * 10) / 10;
+    const b = evaluateBalance(totals);
+    let html = `<div style="text-align:center;margin-bottom:14px"><div style="font-size:38px;font-weight:800;color:${b.gradeColor}">${b.percent}分</div><div style="color:${b.gradeColor};font-weight:600">${b.grade}</div></div>`;
+    b.items.forEach(it => { html += `<div style="display:flex;justify-content:space-between;padding:7px 0;font-size:13px;border-bottom:1px solid #f3f5f8"><span>${it.n}</span><span><b style="color:${it.c}">${it.s}</b> <span style="color:#999">${it.v}</span></span></div>`; });
+    const adv = generateAdvice(totals, state.profile.chronic_diseases);
+    html += `<div style="margin-top:12px;font-size:13px;color:#555;line-height:1.7;background:#f7f9fc;border-radius:10px;padding:10px">${adv.replace(/\n/g, '<br>')}</div>`;
+    document.getElementById('nutritionBody').innerHTML = html;
+    document.getElementById('nutritionModal').classList.add('active');
+  }
+
+  // ===== 通用 =====
+  function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+  let toastTimer;
+  function toast(m) { const t = document.getElementById('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2200); }
+
+  // ===== 启动 =====
+  load();
+  if (getUsers().length === 0) saveUsers([{ phone: '13800138000', pwd: 'demo123' }]);
+  renderChips();
+  renderToday();
+  renderHistory();
+  renderRecords();
+  renderFamily();
+  renderCloudFamily();
+  // PWA：注册 Service Worker（可添加到桌面、离线打开外壳）
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
+  }
+  </script>
+</body>
+</html>
