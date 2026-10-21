@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: saj-food-safety
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: VISION_API_KEY
+        sync: false
+      - key: VISION_BASE_URL
+        value: https://open.bigmodel.cn/api/paas/v4
+      - key: VISION_MODEL
+        value: glm-4v-plus
+      - key: VISION_FALLBACK_MODEL
+        value: glm-4v-flash
