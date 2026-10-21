@@ -1,0 +1,7 @@
+﻿node_modules/
+.env
+data.json
+backend/.env
+current-url.txt
+*.log
+.DS_Store
